@@ -1,4 +1,69 @@
 = FreeBSD Audio and Jack
 Florian Walpen <dev@submerge.ch>
 
-Initial content to test AsciiDoc on github.
+These notes are a mixture of guidelines, configuration details and setup
+recommendations for using https://jackaudio.org/[Jack Audio Server] on
+https://jackaudio.org/[FreeBSD]. Most of it is based on my experiments and
+findings while doing a rewrite of the Jack driver backend for FreeBSD. I am
+neither a sound engineer nor an expert on FreeBSD system internals though.
+
+
+== Setup and Use Cases
+
+Requirements vary greatly between different use cases. It makes sense to be
+aware of what you want to achieve, before going into the details.
+
+=== Playback Only
+
+This is the simplest use case, given that there is no need to synchronize the
+output with external events. Latency settings can be relaxed, longer processing
+cycles and large buffers keep CPU load and system timing constraints at a
+minimum. If you have to synchronize with external events, see the section
+on live processing.
+
+
+=== Recording
+
+Usually recording also includes playback, to e.g. capture a guitar playing
+along a previously recorded drum track. Certainly you want the timing of the
+guitar track to match the drums. Still there is no need to go _low latency_,
+since audio software can _compensate_ the latency while recording. But it's
+essential to have _stable latency_, for multiple takes and also between
+recording sessions.
+
+[NOTE]
+====
+
+While it's technically possible to use different devices for recording and
+playback, this is not recommended. It may cause problems since the devices are
+not synchronized and run at a slightly different speed.
+
+====
+
+
+=== Monitoring
+
+Obviously you want to hear your instrument playing while recording. It is
+_highly preferable_ to circumvent the software stack altogether and have an
+external monitoring solution in hardware. This could be a complete mixing desk
+or just some direct monitoring knobs on your audio interface. Going through the
+software stack will introduce _noticeable_ latency -- expect at least 10ms for
+USB devices.
+
+If you have to do monitoring through Jack, use the low latency settings. Maybe
+it helps to run Jack as a high priority process and setup the monitoring
+directly as connections on the Jack server, bypassing other Jack clients
+(untested).
+
+
+=== Live Processing
+
+This means use cases where low latency is crucial, like add some plugin effects
+to a live performance, emulating guitar amps or playing a software synthesizer.
+To be honest, I don't think FreeBSD is the right tool for this job. There is no
+realtime support, no good way to run multiple user processes at high priority,
+and most hardware drivers set a lower limit to the duration of processing
+cycles.
+
+Don't do this unless your sounds are very timing insensitive. Or prove me wrong.
+
