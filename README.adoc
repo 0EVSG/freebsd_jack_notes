@@ -1,5 +1,6 @@
 = FreeBSD Audio and Jack
 Florian Walpen <dev@submerge.ch>
+:toc:
 
 These notes are a mixture of guidelines, configuration details and setup
 recommendations for using https://jackaudio.org/[Jack Audio Server] on
@@ -97,7 +98,7 @@ There are limitations with USB audio devices though:
 * High sample rates with lots of channels may not be supported.
 * Hardware mixing and routing is typically not accessible in software.
 
-In any case, the `snd_uaudio` works in sample blocks of 2ms or more, which
+In any case, `snd_uaudio` works with audio blocks of length 2ms or more, which
 places a lower boundary on the latency you can achieve -- expect at least 5ms
 input and 7ms output latency for Jack.
 
@@ -137,7 +138,6 @@ audio devices (`man snd_uaudio`), not all drivers have something similar.
 
 ./boot/loader.conf
 ----
-# Audio
 snd_uaudio_load="YES" # <1>
 hw.usb.uaudio.buffer_ms="2" # <2>
 hw.usb.uaudio.default_channels="2" # <3>
@@ -152,8 +152,8 @@ hw.usb.quirk.1="0x0582 0x00e6 0x0000 0xffff UQ_AU_VENDOR_CLASS"
 <4> Quirks to make some incompatible devices work.
 
 IMPORTANT: I highly recommend to set the driver buffer length to 2ms for USB
-devices.  The finer granularity of processing makes Jack cycles more regular
-and helps both with stable latency and low latency requirements.
+devices. The finer granularity of processing makes Jack cycles more regular and
+helps both with stable latency and low latency requirements.
 
 If a USB device supports multiple configurations, the driver will choose the
 "best" one. You can make it prefer a different channel count, sample size and
