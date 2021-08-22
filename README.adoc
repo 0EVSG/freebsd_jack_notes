@@ -47,11 +47,10 @@ Obviously you want to hear your instrument playing while recording. It is
 _highly preferable_ to circumvent the software stack altogether and have an
 external monitoring solution in hardware. This could be a complete mixing desk
 or just some direct monitoring knobs on your audio interface. Going through the
-software stack will introduce _noticeable_ latency -- expect at least 10ms for
-USB devices.
+software stack will introduce _noticeable_ latency.
 
-If you have to do monitoring through Jack, use the low latency settings. Maybe
-it helps to run Jack as a high priority process and setup the monitoring
+If you have to do monitoring through Jack, use extra low latency settings.
+Maybe it helps to run Jack as a high priority process and setup the monitoring
 directly as connections on the Jack server, bypassing other Jack clients
 (untested).
 
@@ -66,4 +65,39 @@ and most hardware drivers set a lower limit to the duration of processing
 cycles.
 
 Don't do this unless your sounds are very timing insensitive. Or prove me wrong.
+
+
+=== Hardware
+
+There seem to be only two drivers geared towards audio interfaces for music
+creation and recording. The other pcm drivers (`man sound`) _do_ work with
+Jack. But a soundblaster or internal sound card may have problems recording a
+guitar or driving your studio headphones.
+
+snd_hdspe::
+RME HDSPe AIO and HDSPe RayDAT, professional PCI cards from RME.
+snd_uaudio::
+USB audio interfaces, most class compliant devices should be supported.
+
+Unfortunately I never got my hands on one of those expensive RME cards.
+Supposedly they would provide the lowest latency and the most channels you can
+get with FreeBSD.
+
+USB audio interfaces are more common, affordable, and come in many varieties
+suitable for different setups. The `snd_uaudio` driver implements the protocol
+for generic USB audio class devices, so look out for a _Class Compliant_
+device.
+
+TIP: Class Compliant devices are often marketed as being "iPad compatible".
+
+There are limitations with USB audio devices though:
+
+* Some are not completely Class Compliant, only tested on Windows and Mac.
+* Some need USB quirks to get them running.
+* High sample rates with lots of channels may not be supported.
+* Hardware mixing and routing is typically not accessible in software.
+
+In any case, the `snd_uaudio` works in sample blocks of 2ms or more, which
+places a lower boundary on the latency you can achieve -- expect at least 5ms
+input and 7ms output latency for Jack.
 
