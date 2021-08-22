@@ -101,3 +101,63 @@ In any case, the `snd_uaudio` works in sample blocks of 2ms or more, which
 places a lower boundary on the latency you can achieve -- expect at least 5ms
 input and 7ms output latency for Jack.
 
+
+
+== Device Settings
+
+If your hardware is recognized correctly, it appears in the system logs as pcm
+device
+
+  # dmesg | grep pcm
+  pcm0: <ATI R6xx (HDMI)> at nid 3 on hdaa0
+  pcm1: <Realtek ALC262 (Analog)> at nid 21 and 24,25,26 on hdaa1
+  pcm2: <Realtek ALC262 (Front Analog Headphones)> at nid 27 on hdaa1
+  pcm3: <USB audio> on uaudio0
+
+and also by device driver
+
+  # dmesg | grep uaudio
+  uaudio0 on uhub2
+  uaudio0: <Roland EDIROL UA-25EX, rev 1.10/1.00, addr 2> on usbus4
+  uaudio0: Play[0]: 48000 Hz, 2 ch, 24-bit S-LE PCM format, 2x2ms buffer.
+  uaudio0: Record[0]: 48000 Hz, 2 ch, 24-bit S-LE PCM format, 2x2ms buffer.
+  uaudio0: MIDI sequencer.
+  pcm3: <USB audio> on uaudio0
+  uaudio0: No HID volume keys found.
+
+Otherwise check the
+https://docs.freebsd.org/en/books/handbook/multimedia/[handbook] on how to
+setup your sound card.
+
+=== Loader
+
+These settings are available at boot time when loading the drivers. Most of
+them are optional though, apply as needed. This example is specific to USB
+audio devices (`man snd_uaudio`), not all drivers have something similar.
+
+./boot/loader.conf
+----
+# Audio
+snd_uaudio_load="YES" # <1>
+hw.usb.uaudio.buffer_ms="2" # <2>
+hw.usb.uaudio.default_channels="2" # <3>
+hw.usb.uaudio.default_bits="32"
+hw.usb.uaudio.default_rate="48000"
+hw.usb.quirk.0="0x0a4a 0xc150 0x0000 0xffff UQ_CFG_INDEX_1" # <4>
+hw.usb.quirk.1="0x0582 0x00e6 0x0000 0xffff UQ_AU_VENDOR_CLASS"
+----
+<1> Force loading the driver, prerequisite for other settings.
+<2> Audio buffer length processed at once by the driver, from 2ms to 8ms.
+<3> Default number of channels, sample size and sample rate.
+<4> Quirks to make some incompatible devices work.
+
+IMPORTANT: I highly recommend to set the driver buffer length to 2ms for USB
+devices.  The finer granularity of processing makes Jack cycles more regular
+and helps both with stable latency and low latency requirements.
+
+If a USB device supports multiple configurations, the driver will choose the
+"best" one. You can make it prefer a different channel count, sample size and
+sample rate by setting the defaults here. Quirks are needed when devices don't
+adhere to standards and only work with some special treatment. See `man
+usb_quirk`.
+
