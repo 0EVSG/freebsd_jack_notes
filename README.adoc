@@ -134,7 +134,7 @@ setup your sound card.
 
 These settings are available at boot time when loading the drivers. Most of
 them are optional though, apply as needed. This example is specific to USB
-audio devices (`man snd_uaudio`), not all drivers have something similar.
+audio devices (`man snd_uaudio`), not all drivers have similar settings.
 
 ./boot/loader.conf
 ----
@@ -160,4 +160,34 @@ If a USB device supports multiple configurations, the driver will choose the
 sample rate by setting the defaults here. Quirks are needed when devices don't
 adhere to standards and only work with some special treatment. See `man
 usb_quirk`.
+
+=== Sysctl
+
+These are generic system-wide settings and tunables.
+
+./etc/sysctl.conf
+----
+hw.snd.verbose=2 # <1>
+hw.snd.default_auto=0 # <2>
+hw.snd.default_unit=1 # <3>
+hw.snd.latency=2 # <4>
+hw.snd.latency_profile=1
+----
+<1> Get more info from `/dev/sndstat`, recommended!
+<2> Automatically assign the default sound device `/dev/dsp`.
+<3> Manually set the default sound device `/dev/dsp`.
+<4> Buffering latency tunables.
+
+See `man sound` for more details and possible values. The default sound device is
+picked up by desktop environments and other software like browsers. I prefer to
+set it to some internal sound card, and _not_ to my main audio interface, to
+avoid conflicts.
+
+Caveats:
+
+* Order and numbering of sound devices is not fixed and may change on reboot if
+  new hardware is added.
+* The buffering latency tunables do not affect Jack latency in general.  Some
+  hardware drivers adapt their internal processing latency to the latency
+  tunables, but USB audio does not.
 
