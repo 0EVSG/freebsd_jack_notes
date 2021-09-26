@@ -104,7 +104,7 @@ input and 7ms output latency for Jack.
 
 
 
-== Device Settings
+== System Settings
 
 If your hardware is recognized correctly, it appears in the system logs as pcm
 device
@@ -130,30 +130,26 @@ Otherwise check the
 https://docs.freebsd.org/en/books/handbook/multimedia/[handbook] on how to
 setup your sound card.
 
-=== Loader
+=== Driver Setup
 
-These settings are available at boot time when loading the drivers. Most of
-them are optional though, apply as needed. This example is specific to USB
-audio devices (`man snd_uaudio`), not all drivers have similar settings.
+Most drivers don't need any special treatment and work just fine. USB audio is
+a bit different due to the variety of hardware and supported formats. Some
+important settings are available at boot time (`man snd_uaudio`):
 
 ./boot/loader.conf
 ----
 snd_uaudio_load="YES" # <1>
-hw.usb.uaudio.buffer_ms="2" # <2>
-hw.usb.uaudio.default_channels="2" # <3>
-hw.usb.uaudio.default_bits="32"
+
+hw.usb.uaudio.default_channels="2" # <2>
+hw.usb.uaudio.default_bits="24"
 hw.usb.uaudio.default_rate="48000"
-hw.usb.quirk.0="0x0a4a 0xc150 0x0000 0xffff UQ_CFG_INDEX_1" # <4>
+
+hw.usb.quirk.0="0x0a4a 0xc150 0x0000 0xffff UQ_CFG_INDEX_1" # <3>
 hw.usb.quirk.1="0x0582 0x00e6 0x0000 0xffff UQ_AU_VENDOR_CLASS"
 ----
 <1> Force loading the driver, prerequisite for other settings.
-<2> Audio buffer length processed at once by the driver, from 2ms to 8ms.
-<3> Default number of channels, sample size and sample rate.
-<4> Quirks to make some incompatible devices work.
-
-IMPORTANT: I highly recommend to set the driver buffer length to 2ms for USB
-devices. The finer granularity of processing makes Jack cycles more regular and
-helps both with stable latency and low latency requirements.
+<2> Default number of channels, sample size and sample rate.
+<3> Quirks to make some incompatible devices work.
 
 If a USB device supports multiple configurations, the driver will choose the
 "best" one. You can make it prefer a different channel count, sample size and
@@ -161,33 +157,68 @@ sample rate by setting the defaults here. Quirks are needed when devices don't
 adhere to standards and only work with some special treatment. See `man
 usb_quirk`.
 
-=== Sysctl
+=== Device Settings
 
-These are generic system-wide settings and tunables.
+These are system-wide settings to manage sound devices. Sound devices are
+numbered for identification, with an unnumbered alias `/dev/dsp` which
+represents the default device.
 
 ./etc/sysctl.conf
 ----
 hw.snd.verbose=2 # <1>
 hw.snd.default_auto=0 # <2>
 hw.snd.default_unit=1 # <3>
-hw.snd.latency=2 # <4>
-hw.snd.latency_profile=1
 ----
-<1> Get more info from `/dev/sndstat`, recommended!
+<1> Get more info from `/dev/sndstat`, _recommended_!
 <2> Automatically assign the default sound device `/dev/dsp`.
 <3> Manually set the default sound device `/dev/dsp`.
-<4> Buffering latency tunables.
 
 See `man sound` for more details and possible values. The default sound device is
 picked up by desktop environments and other software like browsers. I prefer to
 set it to some internal sound card, and _not_ to my main audio interface, to
 avoid conflicts.
 
-Caveats:
+WARNING: Order and numbering of sound devices is not fixed and may change on
+reboot if new hardware is added.
 
-* Order and numbering of sound devices is not fixed and may change on reboot if
-  new hardware is added.
-* The buffering latency tunables do not affect Jack latency in general.  Some
-  hardware drivers adapt their internal processing latency to the latency
-  tunables, but USB audio does not.
+=== Latency Tuning
 
+One important latency factor is the number of samples that the device driver
+processes at once. For USB devices this is set at boot time:
+
+./boot/loader.conf
+----
+hw.usb.uaudio.default_channels="2"
+----
+
+I highly recommend to use the minimum value here, which is 2 milliseconds of
+sample data. Apart from reducing the transfer latency, it also has another
+effect. Even if Jack processes a larger block of samples per cycle, this
+smoothes out the cycle times.
+
+For non-USB devices have a look at the corresponding man page. If the driver
+provides no dedicated knobs, it may be worth a try to lower the generic sound
+latency tunables (`man sound`):
+
+./etc/sysctl.conf
+----
+hw.snd.latency=0
+hw.snd.latency_profile=0
+----
+
+These mainly affect the buffering latency, which is irrelevant to Jack. But
+some device drivers adapt to these tunables and process smaller blocks of
+samples at once.
+
+Although not directly involved, timing accuracy also plays a role with latency.
+Inaccurate timer wakeups contribute to buffer over- and underruns, especially
+with low-latency setups. The following increases overall timing accuracy of the
+system and is recommended for all use cases:
+
+./etc/sysctl.conf
+----
+kern.timecounter.alloweddeviation=0
+----
+
+The only downside is more frequent system wakeups, which translates to higher
+power and battery consumption on laptops.
