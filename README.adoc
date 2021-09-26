@@ -222,3 +222,73 @@ kern.timecounter.alloweddeviation=0
 
 The only downside is more frequent system wakeups, which translates to higher
 power and battery consumption on laptops.
+
+=== Disable Autoconversion
+
+Sound devices on FreeBSD accept various sample formats, sample rates and
+channel configurations. They also support concurrent access with separate
+volume control per application. This is achieved by an automatic conversion
+stage in front of the hardware driver, dynamically composed of format
+conversion, channel mixing and volume control stages as needed.
+
+Conversion stages show up in `cat /dev/sndstat` as feeder_format, feeder_mixer
+or feeder_volume:
+
+./dev/sndstat
+----
+...
+pcm3: <USB audio> at ? kld snd_uaudio (1p:1v/1r:1v) default
+        snddev flags=0x2e6<AUTOVCHAN,SOFTPCMVOL,BUSY,MPSAFE,REGISTERED,VPC>
+        [pcm3:play:dsp3.p0]: spd 48000, fmt 0x00200010/0x00210000, flags 0x00002100, 0x00000006
+        interrupts 1053, underruns 0, feed 1052, ready 0 [b:4608/2304/2|bs:4096/2048/2]
+        channel flags=0x2100<BUSY,HAS_VCHAN>
+        {userland} -> feeder_mixer(0x00200010) -> feeder_format(0x00200010 -> 0x00210000) -> {hardware}
+...
+----
+
+NOTE: Automatic conversion is not applied to audio interfaces with more than 8
+channels.
+
+While very convenient in general, this behaviour has some drawbacks when using
+Jack. The conversion stages introduce noticeable latency, irregular processing
+cycles and hinder buffer management by reporting incorrect buffer statistics.
+
+There are two solutions, depending on how the audio interface is used.
+
+Bitperfect Mode:: Completely disable conversion and concurrent access. This
+makes sense if Jack is the only program to open the device.
++
+./etc/sysctl.conf
+----
+dev.pcm.3.play.vchans=0
+dev.pcm.3.rec.vchans=0
+dev.pcm.3.bitperfect=1
+----
+
+Exclusive Mode:: Configure Jack to open the device in exclusive mode (see Jack
+configuration). Make sure the device is not used by any other program at the
+same time. Also we have to set the sample rate and format of the device to
+match _exactly_ what we want to use with Jack.
++
+./etc/sysctl.conf
+----
+dev.pcm.3.play.vchanformat=s24le:2.0
+dev.pcm.3.play.vchanrate=48000
+dev.pcm.3.rec.vchanformat=s24le:2.0
+dev.pcm.3.rec.vchanrate=48000
+----
+
+When running Jack, we can check `cat /dev/sndstat` again to make sure there is
+no conversion going on - there should be only feeder_root between userland and
+hardware:
+
+./dev/sndstat
+----
+...
+        pcm3:play:dsp3.p0[pcm3:virtual:dsp3.vp0]: spd 48000, fmt 0x00210000, flags 0xb000010c, 0x00000001, pid 1779 (jackdbus)
+        interrupts 0, underruns 0, feed 2467, ready 8928 [b:0/0/0|bs:16368/2046/8]
+        channel flags=0xb000010c<RUNNING,TRIGGERED,BUSY,VIRTUAL,BITPERFECT,EXCLUSIVE>
+        {userland} -> feeder_root(0x00210000) -> {hardware}
+...
+----
+
