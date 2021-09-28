@@ -8,6 +8,7 @@ https://jackaudio.org/[FreeBSD]. Most of it is based on my experiments and
 findings while doing a rewrite of the Jack driver backend for FreeBSD. I am
 neither a sound engineer nor an expert on FreeBSD system internals though.
 
+<<<
 
 == Setup and Use Cases
 
@@ -102,7 +103,7 @@ In any case, `snd_uaudio` works with audio blocks of length 2ms or more, which
 places a lower boundary on the latency you can achieve -- expect at least 5ms
 input and 7ms output latency for Jack.
 
-
+<<<
 
 == System Settings
 
@@ -292,3 +293,55 @@ hardware:
 ...
 ----
 
+<<<
+
+== Jack Configuration
+
+=== Memory Locking
+
+Jack tries to lock part of its memory in RAM, to prevent it from being swapped
+out by the operating system. We have to explicitly allow this in
+`/etc/login.conf`, for the users that want to run Jack. For simplicity I just
+change the resource limit of the default login class, search for "memorylocked"
+and increase it to at least
+
+./etc/login.conf
+----
+...
+        :memorylocked=128M:\
+...
+----
+
+This should be sufficient for Jack. Remember to run
+
+  # cap_mkdb /etc/login.conf
+
+afterwards and then logout and login again with the user running Jack.
+
+=== Software Packages
+
+Obviously we have to install Jack from packages (`pkg install jackit`) or ports
+(`audio/jack`) first. Some USB devices provide MIDI ports, they can be made
+accessible via `audio/jack_umidi`. To make any use of Jack we probably need
+additional software like:
+
+Jack GUI:: Both `audio/qjackctl` and `audio/cadence` are GUI utilities for
+managing a Jack server and its audio connections in a graphical way.
++
+WARNING: Do not use QjackCtl or Cadence to create Jack settings - doesn't work.
+
+DAW:: I'd suggest `audio/ardour6` for full-blown projects, but there's some
+alternatives with different scope and varying state of completeness. Like
+`audio/muse-sequecer`, `audio/traverso` or `audio/zrythm`.
+
+Plugins:: Search for package names that end in "-lv2", there's plenty of'em.
+E.g. `audio/calf-lv2` and `audio/lsp-plugins-lv2` will cover the basics,
+there's `audio/guitarix-lv2` for guitar effects, and `audio/avldrums-lv2` is a
+decent MIDI drum set.
+
+Synthesizers and Samplers:: I don't use any standalone synthesizers, but
+searching the packages for "synth" will give you a starting point. But I often
+use `audio/hydrogen` to prototype MIDI drum tracks.
+
+TIP: A quick and easy way to test Jack sound output is to start Hydrogen and
+open one of the demos coming with it.
