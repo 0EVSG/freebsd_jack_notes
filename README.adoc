@@ -166,7 +166,7 @@ represents the default device.
 
 ./etc/sysctl.conf
 ----
-hw.snd.verbose=2 # <1>
+hw.snd.verbose=2      # <1>
 hw.snd.default_auto=0 # <2>
 hw.snd.default_unit=1 # <3>
 ----
@@ -332,16 +332,58 @@ WARNING: Do not use QjackCtl or Cadence to create Jack settings - doesn't work.
 
 DAW:: I'd suggest `audio/ardour6` for full-blown projects, but there's some
 alternatives with different scope and varying state of completeness. Like
-`audio/muse-sequecer`, `audio/traverso` or `audio/zrythm`.
+`audio/muse-sequencer`, `audio/traverso` or `audio/zrythm`.
 
 Plugins:: Search for package names that end in "-lv2", there's plenty of'em.
 E.g. `audio/calf-lv2` and `audio/lsp-plugins-lv2` will cover the basics,
 there's `audio/guitarix-lv2` for guitar effects, and `audio/avldrums-lv2` is a
 decent MIDI drum set.
 
-Synthesizers and Samplers:: I don't use any standalone synthesizers, but
-searching the packages for "synth" will give you a starting point. But I often
-use `audio/hydrogen` to prototype MIDI drum tracks.
+Synthesizers and Samplers:: I have no experience with standalone synthesizers,
+but searching the packages for "synth" will give you a some options. The same
+goes for samplers, I only use `audio/hydrogen` to prototype MIDI drum tracks.
 
 TIP: A quick and easy way to test Jack sound output is to start Hydrogen and
 open one of the demos coming with it.
+
+
+=== DBUS Or RC Service?
+
+Starting Jack server via DBUS is the "modern" approach and most current Jack
+clients assume that to be the standard. Usually DBUS service is required to
+run desktop environments anyway, it is enabled in `rc.conf`:
+
+./etc/rc.conf
+----
+dbus_enable="YES"
+----
+
+Then you should be able to configure and run Jack through the `jack_control`
+command line interface (see below). The DBUS approach is quite flexible. It is
+common for audio software to start a Jack server on demand if it's not already
+running.
+
+The alternative is to start Jack server by an RC service which can be enabled
+at boot time:
+
+./etc/rc.conf
+----
+jackd_enable="YES" # <1>
+jackd_user="joe"   # <2>
+jackd_rtprio="YES" # <3>
+----
+<1> Enable Jack RC service at boot time, set "NO" to start manually.
+<2> The user for which the Jack server is started.
+<3> Set the system scheduling for Jack server to high priority.
+
+This can be convenient for some rather static setups, but it is restricted to a
+single audio software user. Configuration is also done in `rc.conf`.
+
+The ability to run Jack at high priority is not as helpful as it sounds.
+Remember that Jack itself is only a means to an end, and the Jack clients which
+do the actual recording and playback are not run at high priority. If you run
+Jack server at high priority, it probably makes sense to configure it for
+"async" processing mode.
+
+CAUTION: Mixing the DBUS and RC service methods can be problematic, make sure
+you only run one instance of Jack server at a time.
