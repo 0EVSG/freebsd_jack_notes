@@ -387,3 +387,75 @@ Jack server at high priority, it probably makes sense to configure it for
 
 CAUTION: Mixing the DBUS and RC service methods can be problematic, make sure
 you only run one instance of Jack server at a time.
+
+
+=== Jack Settings
+
+Let's focus on the DBUS approach first. Don't worry, the RC service takes the
+same setting parameters, just as CLI arguments. The idea of the DBUS control
+interface is to change the current settings as needed, and then start the Jack
+server with these settings. Settings are persistently stored in
+`~/.config/jack/conf.xml`.
+
+  # jack_control help
+
+prints an overview of the subcommands of the control interface. Before anything
+else we have to set the driver backend, OSS in our case.
+
+  # jack_control ds oss
+
+Then we can examine the driver specific settings.
+
+  # jack_control dp
+
+Individual parameters can be modified as follows:
+
+  # jack_control dps rate 48000
+
+Relevant parameters for the OSS driver backend are
+
+rate:: Sample rate used by the audio interface, like 44100, 48000, 96000.
+
+period:: Length of a Jack processing cycle in samples (per channel). The
+duration depends on the sample rate, e.g. a period of 384 at 48kHz results in
+384 / 48000 = 8ms. A lower value means less overall latency, but also more risk
+of playback and recording gaps.
++
+TIP: I recommend to use a multiple of what the device driver processes at once.
+With 96 (2ms) for a USB device at 48kHz, a period of 192 (4ms), 384 (8ms) or 768
+(16ms) would be feasible. If unsure, search the logs for `read blocks` and
+`write blocks` - Jack tries to detect the block size processed by the driver
+when opening the device.
++
+WARNING: Some Jack clients expect the period to be a power of two (256, 512,
+1024...) but most software and plugins do not rely on that.
+
+nperiods:: Additional output buffer, in number of periods. Increasing this
+value by one will increase playback latency by one period. With the default
+value of 1, the buffer-induced latency stays between 0 and 1 period for input,
+and between 1 and 2 periods for output in normal operation. Also Jack
+processing can be 1 period late, before playback and recording gaps occur.
+
+TIP: The default of 1 extra period works well in most setups, there's rarely
+any need to change this.
+
+wordlength:: Sample size in bits (16, 24, 32).
+
+inchannels:: Number of recording channels of the sound device.
+
+outchannels:: Number of playback channels of the sound device.
+
+excl:: Exclusive access, only Jack can use the sound device while Jack is
+running. Recommended!
+
+capture and playback:: Paths to the recording and playback device. They must
+represent the same audio interface, or you will likely run into synchronization
+problems.
+
+input-latency:: External recording latency in samples, includes the whole path
+from analog input through the audio interface to the device driver. This is
+used for latency correction by Jack clients.
+
+output-latency:: Same as input-latency, but for the whole path from device
+driver to analog output. Also used for latency correction.
+
