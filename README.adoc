@@ -459,3 +459,26 @@ used for latency correction by Jack clients.
 output-latency:: Same as input-latency, but for the whole path from device
 driver to analog output. Also used for latency correction.
 
+The engine parameters affect the general behaviour of Jack, most of them should
+be left untouched. Available parameters can be listed with
+
+  # jack_control ep
+
+realtime:: FreeBSD does not support the Linux way of applications
+self-promoting to realtime priority. Set this to `False`.
+
+verbose:: This can be temporarily enabled to help with debugging. Jack will
+spit out a _lot_ of details into the logs, turn it off for normal operation.
+
+sync:: By default, Jack operates in what it calls _asynchronous_ mode. A
+processing cycle fetches a period of capture samples first, then outputs the
+playback samples processed in the _previous_ cycle, and finally lets the clients
+process the samples of the current cycle. Jack will not wait for all clients to finish,
+and proceed with the next cycle when time is up.
++
+If _synchronous_ mode is enabled, Jack will output the playback samples
+processed in the _current_ cycle, bypassing the extra buffer with one period of
+latency. This comes at the cost of strictly waiting for all clients to finish,
+thus clients and plugins that misbehave may quickly render Jack operation
+unstable.
+
