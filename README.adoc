@@ -476,9 +476,42 @@ playback samples processed in the _previous_ cycle, and finally lets the clients
 process the samples of the current cycle. Jack will not wait for all clients to finish,
 and proceed with the next cycle when time is up.
 +
-If _synchronous_ mode is enabled, Jack will output the playback samples
+If _synchronous_ mode is enabled here, Jack will output the playback samples
 processed in the _current_ cycle, bypassing the extra buffer with one period of
 latency. This comes at the cost of strictly waiting for all clients to finish,
 thus clients and plugins that misbehave may quickly render Jack operation
 unstable.
+
+
+=== Switching Interfaces
+
+Sometimes you want to switch between different audio interfaces, or even just
+different configurations of the same interface. Since GUI tool like QJackCtl
+and Cadence can't handle Jack settings correctly on FreeBSD, we have to resort
+to shell scripts:
+
+.JackConfig18i20.sh
+[source,shell]
+----
+#!/bin/sh
+# Jack config for the Focusrite 18i20
+jack_control dps rate 48000
+jack_control dps period 768
+jack_control dps wordlength 32
+jack_control dps inchannels 18
+jack_control dps outchannels 20
+jack_control dps input-latency 80
+jack_control dps output-latency 80
+----
+
+Jack DBUS server stores its settings persistently, thus we can adjust only the
+settings that change frome interface to interface, and leave the others
+untouched. If the device numbers change, symbolic links may be used to create a
+device alias on the fly.
+
+  # ln -s /dev/dsp3 /dev/dsp_jack
+
+If started as an RC service, the settings have to be changed in `/etc/rc.conf`
+before doing a restart of the service.
+
 
