@@ -52,7 +52,7 @@ or just some direct monitoring knobs on your audio interface. Going through the
 software stack will introduce _noticeable_ latency.
 
 If you have to do monitoring through Jack, use extra low latency settings.
-Maybe it helps to run Jack as a high priority process and setup the monitoring
+Maybe it helps to run Jack at realtime priority and setup the monitoring
 directly as connections on the Jack server, bypassing other Jack clients
 (untested).
 
@@ -61,10 +61,9 @@ directly as connections on the Jack server, bypassing other Jack clients
 
 This means use cases where low latency is crucial, like add some plugin effects
 to a live performance, emulating guitar amps or playing a software synthesizer.
-To be honest, I don't think FreeBSD is the right tool for this job. There is no
-realtime support, no good way to run multiple user processes at high priority,
-and most hardware drivers set a lower limit to the duration of processing
-cycles.
+To be honest, I don't think FreeBSD is the best tool for this job. Most
+hardware drivers set a lower limit to the duration of processing cycles, and
+thus to the lowest achievable latency.
 
 Don't do this unless your sounds are very timing insensitive. Or prove me wrong.
 
@@ -293,9 +292,6 @@ hardware:
 ...
 ----
 
-<<<
-
-== Jack Configuration
 
 === Memory Locking
 
@@ -317,6 +313,46 @@ This should be sufficient for Jack. Remember to run
   # cap_mkdb /etc/login.conf
 
 afterwards and then logout and login again with the user running Jack.
+
+
+=== Realtime Priority
+
+The FreeBSD scheduler is able to run processes with so-called realtime
+priority, which means these processes will not be interrupted by other
+processes, or even drivers. Running Jack with realtime priority can help a
+great deal to avoid gaps in audio processing, in particular with modern desktop
+environments.
+
+Traditionally, only root was allowed to run processes at realtime priority.
+Starting with FreeBSD 13.1, this privilege can be granted to individual users.
+We have to load the `mac_priority` kernel module, through
+
+  # kldload mac_priority
+
+or at system boot for a permanent setup:
+
+./etc/rc.conf
+----
+kld_list="mac_priority"
+----
+
+Then we just add the audio user to the `realtime` group.
+
+  # pw groupmod realtime -m joe
+
+The man pages have more info on this, see `man mac_priority` and `man rtprio`.
+
+WARNING: Misbehaving processes running at realtime priority can render a system
+unusable by starving all other processes. Only selected processes or threads
+should be run at realtime priority.
+
+Fortunately, Jack and Jack clients take care of this and only elevate threads to
+realtime priority when needed. This can be enabled in the Jack settings.
+
+<<<
+
+
+== Jack Configuration
 
 === Software Packages
 
@@ -350,8 +386,8 @@ open one of the demos coming with it.
 === DBUS Or RC Service?
 
 Starting Jack server via DBUS is the "modern" approach and most current Jack
-clients assume that to be the standard. Usually DBUS service is required to
-run desktop environments anyway, it is enabled in `rc.conf`:
+clients assume that to be the default. Usually DBUS service is required to run
+desktop environments anyway, it is enabled in `rc.conf`:
 
 ./etc/rc.conf
 ----
@@ -374,16 +410,19 @@ jackd_rtprio="YES" # <3>
 ----
 <1> Enable Jack RC service at boot time, set "NO" to start manually.
 <2> The user for which the Jack server is started.
-<3> Set the system scheduling for Jack server to high priority.
+<3> Set the system scheduling for Jack server to realtime priority.
 
 This can be convenient for some rather static setups, but it is restricted to a
 single audio software user. Configuration is also done in `rc.conf`.
 
-The ability to run Jack at high priority is not as helpful as it sounds.
-Remember that Jack itself is only a means to an end, and the Jack clients which
-do the actual recording and playback are not run at high priority. If you run
-Jack server at high priority, it probably makes sense to configure it for
-"async" processing mode.
+The RC script allows to run the Jack server with realtime priority, even when
+the user itself does not have the rights to do so. In practice this leads to
+problems, because Jack clients started by the user cannot run with realtime
+priority.
+
+Thus starting with FreeBSD 13.1, it is recommended to grant realtime privileges
+to the audio user through the `mac_priority` kernel module, see
+<<realtime-priority,Realtime Priority>>.
 
 CAUTION: Mixing the DBUS and RC service methods can be problematic, make sure
 you only run one instance of Jack server at a time.
@@ -464,8 +503,9 @@ be left untouched. Available parameters can be listed with
 
   # jack_control ep
 
-realtime:: FreeBSD does not support the Linux way of applications
-self-promoting to realtime priority. Set this to `False`.
+realtime:: Let Jack and Jack clients elevate specific threads to be scheduled
+with realtime priority. Set this to `False` if the user does not have realtime
+privileges, see <<realtime-priority,Realtime Priority>>.
 
 verbose:: This can be temporarily enabled to help with debugging. Jack will
 spit out a _lot_ of details into the logs, turn it off for normal operation.
