@@ -554,4 +554,94 @@ device alias on the fly.
 If started as an RC service, the settings have to be changed in `/etc/rc.conf`
 before doing a restart of the service.
 
+<<<
 
+
+== Latency Correction
+
+As mentioned previously, software like Ardour can compensate the playback and
+recording latency of a system when recording. This not only involves the
+internal buffer and driver delays, but also the bus communication (PCI, USB),
+and conversion between analog and digital on the audio interface.
+
+Even with numbers from the interface manufacturer, it is difficult to foretell
+the actual latency of a specific setup. So our goal is to _measure_ the latency
+of our setup. The easiest way to do this is to create a physical loopback
+connection on the audio interface, connecting a playback output back to a
+recording input. Then we can measure the _roundtrip_ latency as seen by Jack
+clients, using the `jack_iodelay` utility.
+
+
+=== Loopback Considerations
+
+The idea is to model the recording process, and use a loopback cable in place
+of the musician. Let's say you are listening to a drum track on headphones, and
+recording a guitar performance to that. Then you would use the loopback cable
+to connect the headphone output to the guitar recording input, for latency
+measurement. In principle this should also include speaker and effect delays,
+but that's usually not practicable.
+
+* Turn down the volume on the audio interface, where available.
+* Connect the loopback cable to your playback output or a similar (analog) output.
+* Connect the other end to your recording input or a similar (analog) input.
+* Make sure the output is compatible with the input, there are different
+  impedances (guitars, microphones) and line levels.
+* Find out which channels these are mapped to in Jack.
+
+WARNING: Double-check that your audio interface does not monitor the loopback
+input on the output - you don't want to create a feedback loop on the
+interface!
+
+If direct monitoring can't be disabled on the audio interface, there's the
+possibility to use a left stereo channel as output and a right channel as
+input. Given the monitoring is in stereo, not mono.
+
+
+=== Measurement
+
+With the loopback connection in place, we can start the Jack server and do the
+measurement. Set the latency correction parameters, `input-latency` and
+`output-latency`, to 0. Make sure the other settings are the same as you would
+use for recording. A change of the sample rate for example will produce a
+different latency.
+
+. Start the Jack server.
+. Open a graphical Jack connection manager, like QJackCtl or Catia.
+. Run `jack_iodelay` in a separate terminal, Jack connectors will appear.
+. Connect the output of `jack_iodelay` to the loopback playback channel.
+. Connect the loopback recording channel to the input of `jack_iodelay`.
+. Turn up the volume on the audio interface, if available.
+
+Now `jack_iodelay` should print a series of measured latencies, with
+corresponding correction parameters for Jack.
+
+.jack_iodelay
+----
+...
+  2157.119 frames     44.940 ms total roundtrip latency
+        extra loopback latency: 1005 frames
+        use 502 for the backend arguments -I and -O
+...
+----
+
+Note the correction parameter values, "backend arguments -I and -O" corresponds
+to the `input-latency` and `output-latency` settings. Then disconnect
+`jack_iodelay` in Jack and stop it in the terminal by pressing `Ctrl + C`.
+
+The correction parameters printed will split the total roundtrip latency
+equally between input and output. Actual latencies may be asymmetric, but that
+doesn't matter for recording.
+
+For comparison, in my measurements OSS and USB audio hardware add about 20ms of
+roundtrip latency. That results in correction parameters of around 480 samples
+(10ms each) when running at 48kHz. If you get unusually high values, or even
+unstable values, there may be something wrong with the measurement or your
+setup.
+
+NOTE: Up until Jack 1.9.21, the minimum internal latency Jack computes is off
+by one period. This means the measuring method still leads to valid correction
+parameters, but does not reflect the actual roundtrip latency of OSS and
+hardware. A fix is underway.
+
+After setting the latency correction parameters in Jack, recordings should
+match the timing of existing tracks within about 1-2 ms.
