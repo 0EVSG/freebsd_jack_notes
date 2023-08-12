@@ -67,6 +67,15 @@ thus to the lowest achievable latency.
 
 Don't do this unless your sounds are very timing insensitive. Or prove me wrong.
 
+[NOTE]
+====
+
+Update:
+The `snd_hdspe` driver is capable of running with very small (sub-millisecond)
+buffer sizes and thus suitable for live processing. But Jack is not yet ready
+to exploit that. Upcoming Jack 1.9.23 should make that possible.
+
+====
 
 === Hardware
 
@@ -80,9 +89,11 @@ RME HDSPe AIO and HDSPe RayDAT, professional PCI cards from RME.
 snd_uaudio::
 USB audio interfaces, most class compliant devices should be supported.
 
-Unfortunately I never got my hands on one of those expensive RME cards.
-Supposedly they would provide the lowest latency and the most channels you can
-get with FreeBSD.
+The RME cards work really well, with very low latency if desired. But the
+driver is somewhat limited. All channels are split into separate pairs, one
+pair of channels each pcm device. Means an ADAT connection of 8 channels at
+48kHz is split into 4 pcm devices, with no direct way to access all 8 channels
+from Jack.
 
 USB audio interfaces are more common, affordable, and come in many varieties
 suitable for different setups. The `snd_uaudio` driver implements the protocol
