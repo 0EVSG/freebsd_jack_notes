@@ -375,9 +375,11 @@ additional software like:
 Jack GUI:: Both `audio/qjackctl` and `audio/cadence` are GUI utilities for
 managing a Jack server and its audio connections in a graphical way.
 +
-WARNING: Do not use QjackCtl or Cadence to create Jack settings - doesn't work.
+WARNING: The Jack settings produced by the Cadence GUI are incompatible with
+FreeBSD. QjackCtl creates valid Jack configurations with the `oss` driver, but
+doesn't support all settings.
 
-DAW:: I'd suggest `audio/ardour6` for full-blown projects, but there's some
+DAW:: I'd suggest `audio/ardour` for full-blown projects, but there's some
 alternatives with different scope and varying state of completeness. Like
 `audio/muse-sequencer`, `audio/traverso` or `audio/zrythm`.
 
@@ -537,7 +539,7 @@ unstable.
 === Switching Interfaces
 
 Sometimes you want to switch between different audio interfaces, or even just
-different configurations of the same interface. Since GUI tool like QJackCtl
+different configurations of the same interface. Since GUI tools like QjackCtl
 and Cadence can't handle Jack settings correctly on FreeBSD, we have to resort
 to shell scripts:
 
