@@ -199,7 +199,7 @@ processes at once. For USB devices this is set at boot time:
 
 ./boot/loader.conf
 ----
-hw.usb.uaudio.default_channels="2"
+hw.usb.uaudio.buffer_ms="2"
 ----
 
 I highly recommend to use the minimum value here, which is 2 milliseconds of
