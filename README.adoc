@@ -1,12 +1,20 @@
 = FreeBSD Audio and Jack
 Florian Walpen <dev@submerge.ch>
-:toc:
+{docdate}
+:homepage: https://submerge.ch/FreeBSD/freebsd_jack_notes/index.html
+:download: https://submerge.ch/FreeBSD/freebsd_jack_notes/freebsd_jack_notes.pdf
+:repository: https://github.com/0EVSG/freebsd_jack_notes
+:toc: left
+
 
 These notes are a mixture of guidelines, configuration details and setup
 recommendations for using https://jackaudio.org/[Jack Audio Server] on
 https://jackaudio.org/[FreeBSD]. Most of it is based on my experiments and
 findings while doing a rewrite of the Jack driver backend for FreeBSD. I am
-neither a sound engineer nor an expert on FreeBSD system internals though.
+neither a sound engineer nor an expert on FreeBSD system internals though. +
+ +
+Read this document {homepage}[online], download a {download}[PDF], or
+contribute via {repository}[repository].
 
 <<<
 
