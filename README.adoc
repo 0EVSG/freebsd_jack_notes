@@ -183,9 +183,14 @@ hw.usb.quirk.1="0x0582 0x00e6 0x0000 0xffff UQ_AU_VENDOR_CLASS"
 
 If a USB device supports multiple configurations, the driver will choose the
 "best" one. You can make it prefer a different channel count, sample size and
-sample rate by setting the defaults here. Quirks are needed when devices don't
-adhere to standards and only work with some special treatment. See `man
-usb_quirk`.
+sample rate by setting the defaults here. Usually the sample rate can be changed
+at runtime, but the other settings are fixed when the device is attached.
+
+NOTE: Only set defaults here when really needed. They are applied to all
+USB audio devices, even those they were not intended for.
+
+Quirks are needed when devices don't adhere to standards and only work with
+some special treatment. See `man usb_quirk`.
 
 === Device Settings
 
@@ -214,7 +219,7 @@ reboot if new hardware is added.
 === Latency Tuning
 
 One important latency factor is the number of samples that the device driver
-processes at once. For USB devices this is set at boot time:
+processes at once. For USB devices this can be set at boot time:
 
 ./boot/loader.conf
 ----
@@ -225,6 +230,13 @@ I highly recommend to use the minimum value here, which is 2 milliseconds of
 sample data. Apart from reducing the transfer latency, it also has another
 effect. Even if Jack processes a larger block of samples per cycle, this
 smoothes out the cycle times.
+
+NOTE: In 14.1-RELEASE, the minimum `buffer_ms` value was reduced to 1ms for USB
+audio devices. This is recommended for low latency setups.
+
+The redesigned driver backend of the upcoming Jack 1.9.23 will be largely
+independent of the hardware processing cycles. Small `buffer_ms` values are
+then only relevant for low latency use cases.
 
 For non-USB devices have a look at the corresponding man page. If the driver
 provides no dedicated knobs, it may be worth a try to lower the generic sound
@@ -250,8 +262,9 @@ system and is recommended for all use cases:
 kern.timecounter.alloweddeviation=0
 ----
 
-The only downside is more frequent system wakeups, which translates to higher
-power and battery consumption on laptops.
+The downside of short processing cycles and timing accuracy is more frequent
+system wakeups, which translates to higher power and battery consumption on
+laptops.
 
 === Disable Autoconversion
 
