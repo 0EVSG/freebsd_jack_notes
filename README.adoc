@@ -9,9 +9,10 @@ Florian Walpen <dev@submerge.ch>
 
 These notes are a mixture of guidelines, configuration details and setup
 recommendations for using https://jackaudio.org/[Jack Audio Server] on
-https://jackaudio.org/[FreeBSD]. Most of it is based on my experiments and
-findings while doing a rewrite of the Jack driver backend for FreeBSD. I am
-neither a sound engineer nor an expert on FreeBSD system internals though. +
+https://freebsd.org/[FreeBSD]. Most of it is based on my experiments and
+findings while doing a rewrite of the Jack driver backend for FreeBSD. Since
+then I've also become involved with development of the FreeBSD kernel audio
+subsystem. +
  +
 Read this document {homepage}[online], download a {download}[PDF], or
 contribute via {repository}[repository].
@@ -20,32 +21,33 @@ contribute via {repository}[repository].
 
 == Setup and Use Cases
 
-Requirements vary greatly between different use cases. It makes sense to be
-aware of what you want to achieve, before going into the details.
+The hardware and system requirements vary greatly depending on the use case.
+It makes sense to understand the different scenarios before diving into the
+details of settings and configuration.
 
 === Playback Only
 
 This is the simplest use case, given that there is no need to synchronize the
-output with external events. Latency settings can be relaxed, longer processing
-cycles and large buffers keep CPU load and system timing constraints at a
-minimum. If you have to synchronize with external events, see the section
-on live processing.
+output with external events. Latency settings can be relaxed. This means large
+buffers and longer processing cycles keep the timing constraints and the CPU
+load of the system at a minimum. If you _do_ have to synchronize with external
+events, see the section on live processing.
 
 
 === Recording
 
 Usually recording also includes playback, to e.g. capture a guitar playing
 along a previously recorded drum track. Certainly you want the timing of the
-guitar track to match the drums. Still there is no need to go _low latency_,
-since audio software can _compensate_ the latency while recording. But it's
-essential to have _stable latency_, for multiple takes and also between
-recording sessions.
+guitar track to match the drums. There is no need to go _low latency_, since
+audio software can _compensate_ the latency while recording. But it's essential
+to have a _known stable latency_, for multiple takes and also between recording
+sessions.
 
 [NOTE]
 ====
 
 While it's technically possible to use different devices for recording and
-playback, this is not recommended. It may cause problems since the devices are
+playback, this is not recommended. There will be problems when the devices are
 not synchronized and run at a slightly different speed.
 
 ====
@@ -60,50 +62,54 @@ or just some direct monitoring knobs on your audio interface. Going through the
 software stack will introduce _noticeable_ latency.
 
 If you have to do monitoring through Jack, use extra low latency settings.
-Maybe it helps to run Jack at realtime priority and setup the monitoring
-directly as connections on the Jack server, bypassing other Jack clients
-(untested).
+It may help to run Jack with realtime priority and setup the monitoring
+directly as connections on the Jack server, bypassing other Jack clients.
 
 
 === Live Processing
 
-This means use cases where low latency is crucial, like add some plugin effects
+This means scenarios where low latency is crucial, like add some plugin effects
 to a live performance, emulating guitar amps or playing a software synthesizer.
-To be honest, I don't think FreeBSD is the best tool for this job. Most
-hardware drivers set a lower limit to the duration of processing cycles, and
-thus to the lowest achievable latency.
+Hardware, driver and applications all have to work together under very tight
+timing constraints. This is the most demanding use case. 
 
-Don't do this unless your sounds are very timing insensitive. Or prove me wrong.
+Improvements in the FreeBSD audio stack and the upcoming Jack 1.9.23 release
+should make this feasible in the near future. In my experiments, I did get
+roundtrip latency down to around 5-6ms, which is ok for many live processing
+tasks. But this is only possible with some specific hardware and tuning, don't
+expect it to just work.
 
-[NOTE]
-====
-
-Update:
-The `snd_hdspe` driver is capable of running with very small (sub-millisecond)
-buffer sizes and thus suitable for live processing. But Jack is not yet ready
-to exploit that. Upcoming Jack 1.9.23 should make that possible.
-
-====
 
 === Hardware
 
-There seem to be only two drivers geared towards audio interfaces for music
+There seem to be only few drivers geared towards audio interfaces for music
 creation and recording. The other pcm drivers (`man sound`) _do_ work with
 Jack. But a soundblaster or internal sound card may have problems recording a
 guitar or driving your studio headphones.
 
-snd_hdspe::
-RME HDSPe AIO and HDSPe RayDAT, professional PCI cards from RME.
 snd_uaudio::
 USB audio interfaces, most class compliant devices should be supported.
+snd_hdspe::
+RME HDSPe AIO and HDSPe RayDAT, professional PCIe sound cards from RME.
+snd_hdsp (coming in 15.0-RELEASE)::
+RME HDSP 9632 and HDSP 9652, professional PCI (not PCIe) sound cards from RME.
 
-The RME cards work really well, with very low latency if desired. But the
-driver is somewhat limited. All channels are split into separate pairs, one
-pair of channels each pcm device. Means an ADAT connection of 8 channels at
-48kHz is split into 4 pcm devices, with no direct way to access all 8 channels
-from Jack.
+The RME cards work really well, with very low latency if desired. They are
+expensive though, even the used ones often carry a hefty price tag for a sound
+card. With an old PCI slot (or a compatible adapter) available, a used HDSP
+9632 or HDSP 9652 may be an affordable option for a high quality audio
+interface.
 
-USB audio interfaces are more common, affordable, and come in many varieties
+[NOTE]
+====
+
+The `snd_hdspe` driver was restructured in 14.1-RELEASE to make the pcm devices
+match the physical connectors on the card. There are sysctl knobs now to assist
+in diagnosing digital sync problems and to set a fixed sample rate.
+
+====
+
+USB audio interfaces are more common, inexpensive, and come in many varieties
 suitable for different setups. The `snd_uaudio` driver implements the protocol
 for generic USB audio class devices, so look out for a _Class Compliant_
 device.
@@ -117,9 +123,14 @@ There are limitations with USB audio devices though:
 * High sample rates with lots of channels may not be supported.
 * Hardware mixing and routing is typically not accessible in software.
 
-In any case, `snd_uaudio` works with audio blocks of length 2ms or more, which
-places a lower boundary on the latency you can achieve -- expect at least 5ms
-input and 7ms output latency for Jack.
+[NOTE]
+====
+
+The `snd_uaudio` driver has been updated for low latency in 14.1-RELEASE. While
+not as good as the RME cards, roundtrip latencies of 6-7ms should be in reach if the
+hardware supports 1ms processing intervals.
+
+====
 
 <<<
 
