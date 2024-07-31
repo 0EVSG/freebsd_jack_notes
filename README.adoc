@@ -158,13 +158,31 @@ and also by device driver
 
 Otherwise check the
 https://docs.freebsd.org/en/books/handbook/multimedia/[handbook] on how to
-setup your sound card.
+setup your sound card. If unsure, try to load all available sound drivers
+through
+
+ # kldload snd_driver
+
+and see if the device appears in the logs.
 
 === Driver Setup
 
-Most drivers don't need any special treatment and work just fine. USB audio is
-a bit different due to the variety of hardware and supported formats. Some
-important settings are available at boot time (`man snd_uaudio`):
+Most drivers don't need any special treatment and work just fine. They are
+loaded at boot time or when the device is attached. Some drivers for less
+common hardware have to be loaded explicitly, like the RME cards:
+
+./boot/loader.conf
+----
+snd_hdspe_load="YES"
+----
+
+Another reason to load a driver explicitly is to apply some driver specific
+settings. Consult the driver's man page for what settings are available.
+
+USB audio is a bit special due to the variety of hardware and supported
+formats. Some important parameters can be set prior to attaching the device
+(`man snd_uaudio`). In case the USB audio device is permanently connected, this
+has to be done at boot time:
 
 ./boot/loader.conf
 ----
@@ -186,8 +204,8 @@ If a USB device supports multiple configurations, the driver will choose the
 sample rate by setting the defaults here. Usually the sample rate can be changed
 at runtime, but the other settings are fixed when the device is attached.
 
-NOTE: Only set defaults here when really needed. They are applied to all
-USB audio devices, even those they were not intended for.
+CAUTION: Only set defaults here when really needed. They are applied to all
+USB audio devices, even to those they were not intended for.
 
 Quirks are needed when devices don't adhere to standards and only work with
 some special treatment. See `man usb_quirk`.
