@@ -458,7 +458,7 @@ dbus_enable="YES"
 ----
 
 Then you should be able to configure and run Jack through the `jack_control`
-command line interface (see below). The DBUS approach is quite flexible. It is
+command line interface (see <<_jack_settings, Jack Settings>>). The DBUS approach is quite flexible. It is
 common for audio software to start a Jack server on demand if it's not already
 running.
 
@@ -485,7 +485,7 @@ priority.
 
 Thus starting with FreeBSD 13.1, it is recommended to grant realtime privileges
 to the audio user through the `mac_priority` kernel module, see
-<<realtime-priority,Realtime Priority>>.
+<<_realtime_priority,Realtime Priority>>.
 
 CAUTION: Mixing the DBUS and RC service methods can be problematic, make sure
 you only run one instance of Jack server at a time.
@@ -568,7 +568,7 @@ be left untouched. Available parameters can be listed with
 
 realtime:: Let Jack and Jack clients elevate specific threads to be scheduled
 with realtime priority. Set this to `False` if the user does not have realtime
-privileges, see <<realtime-priority,Realtime Priority>>.
+privileges, see <<_realtime_priority,Realtime Priority>>.
 
 verbose:: This can be temporarily enabled to help with debugging. Jack will
 spit out a _lot_ of details into the logs, turn it off for normal operation.
