@@ -458,9 +458,9 @@ dbus_enable="YES"
 ----
 
 Then you should be able to configure and run Jack through the `jack_control`
-command line interface (see <<_jack_settings, Jack Settings>>). The DBUS approach is quite flexible. It is
-common for audio software to start a Jack server on demand if it's not already
-running.
+command line interface (see <<_jack_settings, Jack Settings>>). The DBUS
+approach is quite flexible. It is common for audio software to start a Jack
+server on demand if it's not already running.
 
 The alternative is to start Jack server by an RC service which can be enabled
 at boot time:
@@ -469,23 +469,24 @@ at boot time:
 ----
 jackd_enable="YES" # <1>
 jackd_user="joe"   # <2>
-jackd_rtprio="YES" # <3>
+jackd_args="--realtime -d oss --rate 48000 --period 1024 --device /dev/dsp0" # <3>
 ----
-<1> Enable Jack RC service at boot time, set "NO" to start manually.
+<1> Enable Jack RC service at boot time, set "NO" to start it manually.
 <2> The user for which the Jack server is started.
-<3> Set the system scheduling for Jack server to realtime priority.
+<3> Command line arguments to start Jack server with, see `man jackd`.
 
-This can be convenient for some rather static setups, but it is restricted to a
-single audio software user. Configuration is also done in `rc.conf`.
+If you want Jack server and clients to run with realtime priority, set the
+`--realtime` command line argument and grant the Jack user
+<<_realtime_priority,realtime privileges>>.
 
-The RC script allows to run the Jack server with realtime priority, even when
-the user itself does not have the rights to do so. In practice this leads to
-problems, because Jack clients started by the user cannot run with realtime
-priority.
+NOTE: The `jackd_rtprio` variable in `rc.conf` was used to start Jack server
+with realtime priority, regardless of the user's privileges. This is not
+supported anymore, due to problems with Jack clients.
 
-Thus starting with FreeBSD 13.1, it is recommended to grant realtime privileges
-to the audio user through the `mac_priority` kernel module, see
-<<_realtime_priority,Realtime Priority>>.
+The Jack RC service can be convenient for some rather static setups, but it is
+restricted to a single audio software user. To keep Jack permanently running in
+the background is also useful when running other sound servers on top.
+PulseAudio for example can integrate Jack as an audio sink and source.
 
 CAUTION: Mixing the DBUS and RC service methods can be problematic, make sure
 you only run one instance of Jack server at a time.
