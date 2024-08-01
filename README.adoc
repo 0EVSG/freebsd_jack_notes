@@ -494,10 +494,10 @@ you only run one instance of Jack server at a time.
 
 === Jack Settings
 
-Let's focus on the DBUS approach first. Don't worry, the RC service takes the
-same setting parameters, just as CLI arguments. The idea of the DBUS control
-interface is to change the current settings as needed, and then start the Jack
-server with these settings. Settings are persistently stored in
+Let's focus on the DBUS approach here. Don't worry, the RC service takes the
+same setting parameters, just as command line arguments. The idea of the DBUS
+control interface is to change the current settings as needed, and then start
+the Jack server with these settings. Settings are persistently stored in
 `~/.config/jack/conf.xml`.
 
   # jack_control help
@@ -511,7 +511,7 @@ Then we can examine the driver specific settings.
 
   # jack_control dp
 
-Individual parameters can be modified as follows:
+Individual _driver parameters_ can be modified as follows:
 
   # jack_control dps rate 48000
 
@@ -530,8 +530,9 @@ With 96 (2ms) for a USB device at 48kHz, a period of 192 (4ms), 384 (8ms) or 768
 `write blocks` - Jack tries to detect the block size processed by the driver
 when opening the device.
 +
-WARNING: Some Jack clients expect the period to be a power of two (256, 512,
-1024...) but most software and plugins do not rely on that.
+WARNING: A few Jack clients expect the period to be a power of two (256, 512,
+1024...), but most software and plugins do not rely on that. Some processing
+methods require the period to be a multiple of 16 though.
 
 nperiods:: Additional output buffer, in number of periods. Increasing this
 value by one will increase playback latency by one period. With the default
@@ -548,26 +549,34 @@ inchannels:: Number of recording channels of the sound device.
 
 outchannels:: Number of playback channels of the sound device.
 
-excl:: Exclusive access, only Jack can use the sound device while Jack is
-running. Recommended!
+excl:: Exclusive access, no other application can use the sound device while
+Jack is running. Recommended!
 
-capture and playback:: Paths to the recording and playback device. They must
-represent the same audio interface, or you will likely run into synchronization
-problems.
+capture:: Path to the recording device, `/dev/dsp2` for example. Reset the
+*playback* and *device* settings to open the device in recording only mode.
+
+playback:: Path to the playback device. If in duplex mode, the device must
+represent the same audio interface as *capture*, or you will likely run into
+synchronization problems. Reset the *capture* and *device* settings to open the
+device in playback only mode.
+
+device:: Alternative to set the same device path for both recording and
+playback. Do not combine with *capture* and *playback* settings.
 
 input-latency:: External recording latency in samples, includes the whole path
 from analog input through the audio interface to the device driver. This is
-used for latency correction by Jack clients.
+used for <<_latency_correction,latency correction>> by Jack clients.
 
 output-latency:: Same as input-latency, but for the whole path from device
-driver to analog output. Also used for latency correction.
+driver to analog output. Also used for <<_latency_correction,latency
+correction>>.
 
-The engine parameters affect the general behaviour of Jack, most of them should
+The _engine parameters_ affect the general behaviour of Jack, most of them should
 be left untouched. Available parameters can be listed with
 
   # jack_control ep
 
-realtime:: Let Jack and Jack clients elevate specific threads to be scheduled
+realtime:: Let Jack and Jack clients elevate select threads to be scheduled
 with realtime priority. Set this to `False` if the user does not have realtime
 privileges, see <<_realtime_priority,Realtime Priority>>.
 
