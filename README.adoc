@@ -617,8 +617,8 @@ jack_control dps input-latency 80
 jack_control dps output-latency 80
 ----
 
-Jack DBUS server stores its settings persistently, thus we can adjust only the
-settings that change frome interface to interface, and leave the others
+Jack DBUS server stores its settings persistently, means we can adjust only the
+settings that change from interface to interface, and leave the others
 untouched. If the device numbers change, symbolic links may be used to create a
 device alias on the fly.
 
